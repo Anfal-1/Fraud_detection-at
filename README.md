@@ -1,30 +1,48 @@
-# Financial dashboard 
+# 🛡️ Fraud Detection Dashboard – Next.js + AI
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+A modern web application built with **Next.js** that connects to a trained fraud detection model to classify banking transactions in real-time. Users can input transaction details and instantly receive predictions with confidence scores.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/anfal-flahs-projects/v0-financial-dashboard)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/2i9ua5yKyFX)
+---
 
-## Overview
+## 📌 Overview
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+This dashboard visualizes and interacts with a backend ML model (e.g., XGBoost or Autoencoder) that was trained on over 2 million financial transactions. It allows manual input of transaction data and displays whether the transaction is fraudulent or legitimate.
 
-## Deployment
+---
 
-Your project is live at:
+## ⚙️ Tech Stack
 
-**[https://vercel.com/anfal-flahs-projects/v0-financial-dashboard](https://vercel.com/anfal-flahs-projects/v0-financial-dashboard)**
+| Layer         | Technology                      |
+|---------------|----------------------------------|
+| Frontend      | Next.js 14, React               |
+| Styling       | Tailwind CSS                    |
+| Visualization | Chart.js, React Plotly          |
+| Model Hosting | Flask API / Hugging Face / Vercel Function |
+| Backend (optional) | Python (FastAPI / Flask)      |
+| Deployment    | Vercel                          |
 
-## Build your app
+---
 
-Continue building your app on:
+## 🧠 Features
 
-**[https://v0.dev/chat/projects/2i9ua5yKyFX](https://v0.dev/chat/projects/2i9ua5yKyFX)**
+- ✅ Real-time fraud detection (using AI model)
+- 🧾 Manual input of transaction features:
+  - `cc_num`, `zip`, `city_pop`, `acct_num`, `unix_time`, `amt`
+- 📊 Confidence score + explanation
+- 🌐 Responsive design (mobile + desktop)
+- 📤 Connects to API endpoint: `/api/detect-fraud`
 
-## How It Works
+---
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+## 🚀 Getting Started
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/your-username/fraud-dashboard.git
+cd fraud-dashboard
+
+# 2. Install dependencies
+npm install
+
+# 3. Run development server
+npm run dev
