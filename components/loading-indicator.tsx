@@ -1,57 +1,60 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { Progress } from "@/components/ui/progress"
+import { Loader2 } from "lucide-react"
 
 interface LoadingIndicatorProps {
-  isLoading: boolean
-  progress?: number
   message?: string
+  progress?: number
 }
 
 const loadingMessages = [
-  "جاري تحميل لوحة التحكم...",
-  "تحميل البيانات...",
-  "إعداد الواجهة...",
-  "تحضير المحتوى...",
-  "تحميل المكونات...",
-  "تهيئة النظام...",
+  "جاري تحميل البيانات...",
+  "معالجة المعلومات...",
+  "تحليل المعاملات...",
+  "تحديث النتائج...",
+  "تجهيز العرض...",
 ]
 
-export default function LoadingIndicator({ isLoading, progress = 0, message }: LoadingIndicatorProps) {
+export default function LoadingIndicator({ message, progress }: LoadingIndicatorProps) {
   const [currentMessage, setCurrentMessage] = useState(message || loadingMessages[0])
-  const [messageIndex, setMessageIndex] = useState(0)
+  const [currentProgress, setCurrentProgress] = useState(progress || 0)
 
   useEffect(() => {
-    if (!isLoading) return
+    if (!message) {
+      const messageInterval = setInterval(() => {
+        setCurrentMessage(loadingMessages[Math.floor(Math.random() * loadingMessages.length)])
+      }, 2000)
 
-    const interval = setInterval(() => {
-      setMessageIndex((prev) => {
-        const next = (prev + 1) % loadingMessages.length
-        setCurrentMessage(loadingMessages[next])
-        return next
-      })
-    }, 800)
+      return () => clearInterval(messageInterval)
+    }
+  }, [message])
 
-    return () => clearInterval(interval)
-  }, [isLoading])
+  useEffect(() => {
+    if (progress === undefined) {
+      const progressInterval = setInterval(() => {
+        setCurrentProgress((prev) => {
+          const increment = Math.random() * 15 + 5
+          return Math.min(prev + increment, 95)
+        })
+      }, 300)
 
-  if (!isLoading) return null
+      return () => clearInterval(progressInterval)
+    } else {
+      setCurrentProgress(progress)
+    }
+  }, [progress])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <div className="w-full max-w-md p-6 space-y-4">
-        <div className="text-center space-y-2">
-          <div className="mx-auto w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <h3 className="text-lg font-semibold font-arabic-display">تحميل النظام</h3>
-          <p className="text-sm text-muted-foreground font-arabic-body animate-pulse">{currentMessage}</p>
-        </div>
-
-        <div className="space-y-2">
-          <Progress value={progress} className="h-2" />
-          <div className="flex justify-between text-xs text-muted-foreground font-arabic-body">
-            <span>التقدم</span>
-            <span>{progress}%</span>
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full mx-4">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+          <div className="text-center">
+            <p className="text-lg font-medium text-gray-900 mb-2">{currentMessage}</p>
+            <Progress value={currentProgress} className="w-full h-2" />
+            <p className="text-sm text-gray-500 mt-2">{Math.round(currentProgress)}%</p>
           </div>
         </div>
       </div>
@@ -61,28 +64,32 @@ export default function LoadingIndicator({ isLoading, progress = 0, message }: L
 
 export function useLoading() {
   const [isLoading, setIsLoading] = useState(false)
+  const [message, setMessage] = useState("")
   const [progress, setProgress] = useState(0)
 
-  const startLoading = () => {
-    setIsLoading(true)
+  const startLoading = (loadingMessage?: string) => {
+    setMessage(loadingMessage || "")
     setProgress(0)
+    setIsLoading(true)
+  }
 
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          setIsLoading(false)
-          clearInterval(interval)
-          return 100
-        }
-        return prev + Math.random() * 15 + 5
-      })
-    }, 200)
+  const updateProgress = (newProgress: number, newMessage?: string) => {
+    setProgress(newProgress)
+    if (newMessage) setMessage(newMessage)
   }
 
   const stopLoading = () => {
     setIsLoading(false)
-    setProgress(100)
+    setProgress(0)
+    setMessage("")
   }
 
-  return { isLoading, progress, startLoading, stopLoading }
+  return {
+    isLoading,
+    message,
+    progress,
+    startLoading,
+    updateProgress,
+    stopLoading,
+  }
 }

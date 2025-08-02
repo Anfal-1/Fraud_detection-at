@@ -20,7 +20,7 @@ interface Transaction {
 }
 
 interface TransactionsListProps {
-  onSelectTransaction: (transaction: Transaction) => void
+  onSelectTransaction?: (transaction: Transaction) => void
 }
 
 export default function TransactionsList({ onSelectTransaction }: TransactionsListProps) {
@@ -109,8 +109,14 @@ export default function TransactionsList({ onSelectTransaction }: TransactionsLi
     return "text-green-600 bg-green-50"
   }
 
+  const handleTransactionClick = (transaction: Transaction) => {
+    if (onSelectTransaction) {
+      onSelectTransaction(transaction)
+    }
+  }
+
   return (
-    <div className="p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-6 min-h-screen bg-gray-50">
+    <div className="p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-6 min-h-screen bg-gray-50 overflow-y-auto">
       {/* Header */}
       <div className="text-center sm:text-right">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">قائمة المعاملات</h1>
@@ -291,7 +297,7 @@ export default function TransactionsList({ onSelectTransaction }: TransactionsLi
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => onSelectTransaction(transaction)}
+                              onClick={() => handleTransactionClick(transaction)}
                               className="gap-1 hover:bg-blue-50 hover:border-blue-300 transition-colors text-xs"
                             >
                               <Eye className="w-3 h-3" />
@@ -359,7 +365,7 @@ export default function TransactionsList({ onSelectTransaction }: TransactionsLi
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => onSelectTransaction(transaction)}
+                      onClick={() => handleTransactionClick(transaction)}
                       className="w-full gap-1 hover:bg-blue-50 hover:border-blue-300 transition-colors"
                     >
                       <Eye className="w-4 h-4" />

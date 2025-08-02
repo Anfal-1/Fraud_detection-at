@@ -1,4 +1,173 @@
 @import "tailwindcss";
+
+/* Base styles */
+html {
+  height: auto;
+  min-height: 100%;
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body {
+  height: auto;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  font-family: "Cairo", "Tajawal", system-ui, -apple-system, sans-serif;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Container containment for performance */
+.container {
+  contain: layout style paint;
+}
+
+/* Improved scrolling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--border) / 0.8);
+}
+
+/* Performance optimizations */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-scroll {
+  will-change: scroll-position;
+}
+
+/* GPU acceleration for animations */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Arabic font improvements */
+.arabic-text {
+  font-family: "Cairo", "Tajawal", system-ui, sans-serif;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "arab" 1;
+  text-align: right;
+  direction: rtl;
+}
+
+/* Responsive font sizes */
+@media (max-width: 640px) {
+  body {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  body {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+}
+
+@media (min-width: 1025px) {
+  body {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+}
+
+/* Loading animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Print styles */
+@media print {
+  body {
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  body {
+    --border: 0 0% 20%;
+    --foreground: 0 0% 0%;
+    --background: 0 0% 100%;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Text selection */
+::selection {
+  background: hsl(var(--primary) / 0.2);
+  color: hsl(var(--primary-foreground));
+}
+
+/* Virtual scrolling optimization */
+.virtual-scroll {
+  contain: strict;
+  overflow: auto;
+}
+
+/* Memory optimization */
+.lazy-load {
+  content-visibility: auto;
+  contain-intrinsic-size: 200px;
+}
+
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
@@ -117,6 +286,12 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-cairo), var(--font-sans), system-ui, -apple-system, sans-serif;
@@ -124,6 +299,10 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    height: auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   /* Arabic Typography Improvements */
@@ -349,17 +528,6 @@
   }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes slideInRight {
   from {
     transform: translateX(100%);
@@ -379,11 +547,6 @@
 
 .animate-bounce {
   animation: bounce 1s infinite;
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
-  will-change: opacity, transform;
 }
 
 .animate-slideInRight {
@@ -549,7 +712,7 @@
 }
 
 /* Focus styles for accessibility */
-.focus-visible:focus-visible {
+*:focus-visible {
   @apply outline-2 outline-offset-2 outline-blue-500;
 }
 
@@ -643,4 +806,37 @@ img {
 
 .dashboard-grid {
   contain: layout;
+}
+
+/* Fix scrolling issues */
+html,
+body {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+/* Ensure main containers allow scrolling */
+#__next {
+  min-height: 100vh;
+  height: auto;
+}
+
+/* Remove any fixed heights that prevent scrolling */
+.dashboard-container {
+  height: auto !important;
+  min-height: 100vh;
+  overflow: visible;
+}
+
+/* Fix sidebar and main content scrolling */
+.sidebar {
+  contain: layout style;
+  overflow-y: auto;
+  max-height: 100vh;
+}
+
+.main-content {
+  overflow-y: auto;
+  height: auto;
+  min-height: 100vh;
 }

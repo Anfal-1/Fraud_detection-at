@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 
-export async function GET() {
-  const timestamp = Date.now()
+export async function GET(request: NextRequest) {
+  const timestamp = new Date().toISOString()
 
   return NextResponse.json(
     {
@@ -10,6 +10,7 @@ export async function GET() {
       server: "vercel",
     },
     {
+      status: 200,
       headers: {
         "Cache-Control": "no-cache, no-store, must-revalidate",
         Pragma: "no-cache",
@@ -19,8 +20,8 @@ export async function GET() {
   )
 }
 
-export async function POST() {
-  const timestamp = Date.now()
+export async function POST(request: NextRequest) {
+  const timestamp = new Date().toISOString()
 
   return NextResponse.json(
     {
@@ -29,6 +30,7 @@ export async function POST() {
       server: "vercel",
     },
     {
+      status: 200,
       headers: {
         "Cache-Control": "no-cache, no-store, must-revalidate",
         Pragma: "no-cache",

@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Activity } from "lucide-react"
+import { Activity, Clock, MemoryStick, Gauge, RefreshCw, Monitor, Zap } from "lucide-react"
+import NetworkMonitor from "./network-monitor"
 
 interface PerformanceMetrics {
   fcp: number
@@ -30,178 +32,245 @@ export default function PerformanceMonitor() {
     memoryUsage: 0,
     performanceScore: 0,
   })
-
   const [isLoading, setIsLoading] = useState(true)
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+
+  const measurePerformance = () => {
+    setIsLoading(true)
+
+    // Simulate performance measurement
+    setTimeout(() => {
+      const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming
+      const memory = (performance as any).memory
+
+      const newMetrics: PerformanceMetrics = {
+        fcp: Math.random() * 2000 + 500, // 500-2500ms
+        lcp: Math.random() * 3000 + 1000, // 1000-4000ms
+        fid: Math.random() * 100 + 10, // 10-110ms
+        cls: Math.random() * 0.25, // 0-0.25
+        ttfb: navigation?.responseStart - navigation?.requestStart || Math.random() * 500 + 100,
+        domReady: navigation?.domContentLoadedEventEnd - navigation?.navigationStart || Math.random() * 2000 + 800,
+        loadComplete: navigation?.loadEventEnd - navigation?.navigationStart || Math.random() * 3000 + 1500,
+        memoryUsage: memory ? (memory.usedJSHeapSize / memory.totalJSHeapSize) * 100 : Math.random() * 60 + 20,
+        performanceScore: 0,
+      }
+
+      // Calculate performance score
+      let score = 100
+      if (newMetrics.fcp > 1800) score -= 15
+      else if (newMetrics.fcp > 1000) score -= 8
+
+      if (newMetrics.lcp > 2500) score -= 20
+      else if (newMetrics.lcp > 1500) score -= 10
+
+      if (newMetrics.fid > 100) score -= 15
+      else if (newMetrics.fid > 50) score -= 8
+
+      if (newMetrics.cls > 0.1) score -= 15
+      else if (newMetrics.cls > 0.05) score -= 8
+
+      if (newMetrics.memoryUsage > 70) score -= 10
+      else if (newMetrics.memoryUsage > 50) score -= 5
+
+      newMetrics.performanceScore = Math.max(0, score)
+
+      setMetrics(newMetrics)
+      setLastUpdate(new Date())
+      setIsLoading(false)
+    }, 1000)
+  }
 
   useEffect(() => {
-    const measurePerformance = () => {
-      if (typeof window !== "undefined" && "performance" in window) {
-        const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming
-        const paint = performance.getEntriesByType("paint")
-
-        const fcp = paint.find((entry) => entry.name === "first-contentful-paint")?.startTime || 0
-        const ttfb = navigation.responseStart - navigation.requestStart
-        const domReady = navigation.domContentLoadedEventEnd - navigation.navigationStart
-        const loadComplete = navigation.loadEventEnd - navigation.navigationStart
-
-        // Simulate other metrics
-        const lcp = fcp + Math.random() * 500 + 500
-        const fid = Math.random() * 100
-        const cls = Math.random() * 0.1
-
-        // Memory usage (if available)
-        const memoryUsage = (performance as any).memory
-          ? ((performance as any).memory.usedJSHeapSize / (performance as any).memory.totalJSHeapSize) * 100
-          : Math.random() * 50 + 30
-
-        // Calculate performance score
-        const performanceScore = Math.max(0, Math.min(100, 100 - fcp / 30 - lcp / 50 - fid * 2 - cls * 100 - ttfb / 10))
-
-        setMetrics({
-          fcp: Math.round(fcp),
-          lcp: Math.round(lcp),
-          fid: Math.round(fid),
-          cls: Math.round(cls * 1000) / 1000,
-          ttfb: Math.round(ttfb),
-          domReady: Math.round(domReady),
-          loadComplete: Math.round(loadComplete),
-          memoryUsage: Math.round(memoryUsage),
-          performanceScore: Math.round(performanceScore),
-        })
-
-        setIsLoading(false)
-      }
-    }
-
-    // Initial measurement
-    if (document.readyState === "complete") {
-      measurePerformance()
-    } else {
-      window.addEventListener("load", measurePerformance)
-    }
-
-    // Update metrics every 5 seconds
-    const interval = setInterval(() => {
-      measurePerformance()
-    }, 5000)
-
-    return () => {
-      window.removeEventListener("load", measurePerformance)
-      clearInterval(interval)
-    }
+    measurePerformance()
+    const interval = setInterval(measurePerformance, 30000) // Update every 30 seconds
+    return () => clearInterval(interval)
   }, [])
 
   const getScoreColor = (score: number) => {
-    if (score >= 90) return "text-green-600"
-    if (score >= 70) return "text-yellow-600"
+    if (score >= 90) return "text-green-600 bg-green-50"
+    if (score >= 70) return "text-yellow-600 bg-yellow-50"
+    return "text-red-600 bg-red-50"
+  }
+
+  const getMetricColor = (value: number, thresholds: [number, number]) => {
+    if (value <= thresholds[0]) return "text-green-600"
+    if (value <= thresholds[1]) return "text-yellow-600"
     return "text-red-600"
   }
 
-  const getScoreBadge = (score: number) => {
-    if (score >= 90) return "default"
-    if (score >= 70) return "secondary"
-    return "destructive"
-  }
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-arabic-display">
-            <Activity className="h-5 w-5" />
+  return (
+    <div className="p-3 sm:p-4 lg:p-6 space-y-4 lg:space-y-6 min-h-screen bg-gray-50 overflow-y-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
+            <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
             مراقب الأداء
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600">مراقبة شاملة لأداء التطبيق والشبكة</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            آخر تحديث: {lastUpdate.toLocaleTimeString("ar-SA")}
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={measurePerformance}
+            disabled={isLoading}
+            className="gap-1 bg-transparent"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            تحديث
+          </Button>
+        </div>
+      </div>
+
+      {/* Performance Score */}
+      <Card className="border-l-4 border-l-blue-500">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Gauge className="w-5 h-5 text-blue-600" />
+            النتيجة الإجمالية
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="flex items-center gap-4">
+            <div className={`text-4xl font-bold px-4 py-2 rounded-lg ${getScoreColor(metrics.performanceScore)}`}>
+              {Math.round(metrics.performanceScore)}
+            </div>
+            <div className="flex-1">
+              <Progress value={metrics.performanceScore} className="h-3" />
+              <p className="text-sm text-gray-600 mt-1">
+                {metrics.performanceScore >= 90 ? "ممتاز" : metrics.performanceScore >= 70 ? "جيد" : "يحتاج تحسين"}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
-    )
-  }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between font-arabic-display">
-          <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            مراقب الأداء
+      {/* Core Web Vitals */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">First Contentful Paint</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${getMetricColor(metrics.fcp, [1000, 1800])}`}>
+              {Math.round(metrics.fcp)}ms
+            </div>
+            <p className="text-xs text-gray-500 mt-1">أول محتوى مرئي</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Largest Contentful Paint</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${getMetricColor(metrics.lcp, [1500, 2500])}`}>
+              {Math.round(metrics.lcp)}ms
+            </div>
+            <p className="text-xs text-gray-500 mt-1">أكبر محتوى مرئي</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">First Input Delay</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${getMetricColor(metrics.fid, [50, 100])}`}>
+              {Math.round(metrics.fid)}ms
+            </div>
+            <p className="text-xs text-gray-500 mt-1">تأخير أول إدخال</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Cumulative Layout Shift</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${getMetricColor(metrics.cls, [0.05, 0.1])}`}>
+              {metrics.cls.toFixed(3)}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">تغيير التخطيط</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Loading Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              Time to First Byte
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-xl font-bold ${getMetricColor(metrics.ttfb, [200, 500])}`}>
+              {Math.round(metrics.ttfb)}ms
+            </div>
+            <p className="text-xs text-gray-500 mt-1">وقت أول بايت</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-1">
+              <Monitor className="w-4 h-4" />
+              DOM Ready
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-xl font-bold ${getMetricColor(metrics.domReady, [1000, 2000])}`}>
+              {Math.round(metrics.domReady)}ms
+            </div>
+            <p className="text-xs text-gray-500 mt-1">جاهزية DOM</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-1">
+              <Zap className="w-4 h-4" />
+              Load Complete
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-xl font-bold ${getMetricColor(metrics.loadComplete, [2000, 3000])}`}>
+              {Math.round(metrics.loadComplete)}ms
+            </div>
+            <p className="text-xs text-gray-500 mt-1">اكتمال التحميل</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Memory Usage */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MemoryStick className="w-5 h-5 text-purple-600" />
+            استخدام الذاكرة
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className={`text-2xl font-bold px-3 py-1 rounded ${getMetricColor(metrics.memoryUsage, [50, 70])}`}>
+              {Math.round(metrics.memoryUsage)}%
+            </div>
+            <div className="flex-1">
+              <Progress value={metrics.memoryUsage} className="h-2" />
+              <p className="text-sm text-gray-600 mt-1">استخدام ذاكرة JavaScript</p>
+            </div>
           </div>
-          <Badge variant={getScoreBadge(metrics.performanceScore)}>{metrics.performanceScore}/100</Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Performance Score */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm font-arabic-body">
-            <span>النتيجة الإجمالية</span>
-            <span className={getScoreColor(metrics.performanceScore)}>{metrics.performanceScore}%</span>
-          </div>
-          <Progress value={metrics.performanceScore} className="h-2" />
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Core Web Vitals */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-semibold font-arabic-body">Core Web Vitals</h4>
-
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="flex justify-between">
-              <span className="font-arabic-body">FCP</span>
-              <span className={metrics.fcp < 1800 ? "text-green-600" : "text-red-600"}>{metrics.fcp}ms</span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="font-arabic-body">LCP</span>
-              <span className={metrics.lcp < 2500 ? "text-green-600" : "text-red-600"}>{metrics.lcp}ms</span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="font-arabic-body">FID</span>
-              <span className={metrics.fid < 100 ? "text-green-600" : "text-red-600"}>{metrics.fid}ms</span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="font-arabic-body">CLS</span>
-              <span className={metrics.cls < 0.1 ? "text-green-600" : "text-red-600"}>{metrics.cls}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Loading Metrics */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-semibold font-arabic-body">مقاييس التحميل</h4>
-
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between">
-              <span className="font-arabic-body">TTFB</span>
-              <span>{metrics.ttfb}ms</span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="font-arabic-body">DOM Ready</span>
-              <span>{metrics.domReady}ms</span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="font-arabic-body">Load Complete</span>
-              <span>{metrics.loadComplete}ms</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Memory Usage */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm font-arabic-body">
-            <span>استخدام الذاكرة</span>
-            <span className={metrics.memoryUsage < 70 ? "text-green-600" : "text-yellow-600"}>
-              {metrics.memoryUsage}%
-            </span>
-          </div>
-          <Progress value={metrics.memoryUsage} className="h-2" />
-        </div>
-      </CardContent>
-    </Card>
+      {/* Network Monitor */}
+      <NetworkMonitor />
+    </div>
   )
 }
