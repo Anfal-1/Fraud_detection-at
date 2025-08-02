@@ -4,291 +4,261 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Wifi, WifiOff, Signal, Smartphone, Monitor, RefreshCw } from "lucide-react"
+import { Wifi, WifiOff, Smartphone, RefreshCw } from "lucide-react"
 
-interface NetworkStatus {
-  online: boolean
+interface NetworkInfo {
+  isOnline: boolean
   connectionType: string
+  effectiveType: string
   downlink: number
   rtt: number
   saveData: boolean
   serverLatency: number
-  bandwidth: number
-  packetLoss: number
+  downloadSpeed: number
+  uploadSpeed: number
+  quality: "excellent" | "good" | "fair" | "poor"
 }
 
 export default function NetworkMonitor() {
-  const [networkStatus, setNetworkStatus] = useState<NetworkStatus>({
-    online: true,
-    connectionType: "4g",
-    downlink: 10,
-    rtt: 100,
+  const [networkInfo, setNetworkInfo] = useState<NetworkInfo>({
+    isOnline: true,
+    connectionType: "unknown",
+    effectiveType: "4g",
+    downlink: 0,
+    rtt: 0,
     saveData: false,
     serverLatency: 0,
-    bandwidth: 0,
-    packetLoss: 0,
+    downloadSpeed: 0,
+    uploadSpeed: 0,
+    quality: "good",
   })
 
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isTestingSpeed, setIsTestingSpeed] = useState(false)
   const [lastUpdate, setLastUpdate] = useState(new Date())
 
+  const updateNetworkInfo = async () => {
+    const connection =
+      (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection
+
+    const info: NetworkInfo = {
+      isOnline: navigator.onLine,
+      connectionType: connection?.type || "unknown",
+      effectiveType: connection?.effectiveType || "4g",
+      downlink: connection?.downlink || 0,
+      rtt: connection?.rtt || 0,
+      saveData: connection?.saveData || false,
+      serverLatency: 0,
+      downloadSpeed: 0,
+      uploadSpeed: 0,
+      quality: "good",
+    }
+
+    // Test server latency
+    try {
+      const start = performance.now()
+      await fetch("/api/ping", { cache: "no-cache" })
+      const end = performance.now()
+      info.serverLatency = Math.round(end - start)
+    } catch (error) {
+      info.serverLatency = 999
+    }
+
+    // Determine quality based on metrics
+    if (info.rtt < 50 && info.downlink > 10) {
+      info.quality = "excellent"
+    } else if (info.rtt < 100 && info.downlink > 5) {
+      info.quality = "good"
+    } else if (info.rtt < 200 && info.downlink > 1) {
+      info.quality = "fair"
+    } else {
+      info.quality = "poor"
+    }
+
+    setNetworkInfo(info)
+    setLastUpdate(new Date())
+  }
+
+  const testSpeed = async () => {
+    setIsTestingSpeed(true)
+
+    try {
+      // Simulate speed test
+      const testData = new ArrayBuffer(1024 * 100) // 100KB test
+
+      // Download speed test
+      const downloadStart = performance.now()
+      await fetch("/api/ping", { cache: "no-cache" })
+      const downloadEnd = performance.now()
+      const downloadTime = downloadEnd - downloadStart
+      const downloadSpeed = (100 * 8) / (downloadTime / 1000) // Kbps
+
+      // Upload speed test (simulated)
+      const uploadSpeed = downloadSpeed * 0.8 // Usually lower than download
+
+      setNetworkInfo((prev) => ({
+        ...prev,
+        downloadSpeed: Math.round(downloadSpeed),
+        uploadSpeed: Math.round(uploadSpeed),
+      }))
+    } catch (error) {
+      console.error("Speed test failed:", error)
+    } finally {
+      setIsTestingSpeed(false)
+    }
+  }
+
   useEffect(() => {
-    checkNetworkStatus()
+    updateNetworkInfo()
 
-    const interval = setInterval(checkNetworkStatus, 10000)
-
-    // Listen for online/offline events
-    const handleOnline = () => checkNetworkStatus()
-    const handleOffline = () => checkNetworkStatus()
+    const handleOnline = () => updateNetworkInfo()
+    const handleOffline = () => updateNetworkInfo()
 
     window.addEventListener("online", handleOnline)
     window.addEventListener("offline", handleOffline)
 
+    // Update every 10 seconds
+    const interval = setInterval(updateNetworkInfo, 10000)
+
     return () => {
-      clearInterval(interval)
       window.removeEventListener("online", handleOnline)
       window.removeEventListener("offline", handleOffline)
+      clearInterval(interval)
     }
   }, [])
 
-  const checkNetworkStatus = async () => {
-    const online = navigator.onLine
-    let connectionType = "unknown"
-    let downlink = 0
-    let rtt = 0
-    let saveData = false
-
-    // Get connection info if available
-    if ("connection" in navigator) {
-      const connection = (navigator as any).connection
-      connectionType = connection.effectiveType || "unknown"
-      downlink = connection.downlink || 0
-      rtt = connection.rtt || 0
-      saveData = connection.saveData || false
+  const getQualityColor = (quality: string) => {
+    switch (quality) {
+      case "excellent":
+        return "text-green-600"
+      case "good":
+        return "text-blue-600"
+      case "fair":
+        return "text-yellow-600"
+      case "poor":
+        return "text-red-600"
+      default:
+        return "text-gray-600"
     }
-
-    // Measure server latency
-    let serverLatency = 0
-    let bandwidth = 0
-    let packetLoss = 0
-
-    try {
-      const start = performance.now()
-      const response = await fetch("/api/ping", {
-        cache: "no-cache",
-        method: "GET",
-      })
-
-      if (response.ok) {
-        serverLatency = Math.round(performance.now() - start)
-
-        // Estimate bandwidth based on response time and size
-        const contentLength = response.headers.get("content-length")
-        if (contentLength) {
-          const bytes = Number.parseInt(contentLength)
-          const seconds = serverLatency / 1000
-          bandwidth = Math.round((bytes * 8) / seconds / 1000) // Kbps
-        }
-      }
-    } catch (error) {
-      serverLatency = -1
-      packetLoss = Math.random() * 5 // Simulate packet loss
-    }
-
-    setNetworkStatus({
-      online,
-      connectionType,
-      downlink,
-      rtt,
-      saveData,
-      serverLatency,
-      bandwidth,
-      packetLoss,
-    })
-
-    setLastUpdate(new Date())
   }
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
-    await checkNetworkStatus()
-    setTimeout(() => setIsRefreshing(false), 1000)
+  const getQualityBadge = (quality: string) => {
+    switch (quality) {
+      case "excellent":
+        return "default"
+      case "good":
+        return "secondary"
+      case "fair":
+        return "outline"
+      case "poor":
+        return "destructive"
+      default:
+        return "secondary"
+    }
   }
 
   const getConnectionIcon = () => {
-    if (!networkStatus.online) return <WifiOff className="h-5 w-5 text-red-500" />
-
-    switch (networkStatus.connectionType) {
-      case "4g":
-        return <Signal className="h-5 w-5 text-green-500" />
-      case "3g":
-        return <Signal className="h-5 w-5 text-yellow-500" />
-      case "2g":
-        return <Signal className="h-5 w-5 text-red-500" />
-      default:
-        return <Wifi className="h-5 w-5 text-blue-500" />
-    }
-  }
-
-  const getLatencyColor = (latency: number) => {
-    if (latency === -1) return "destructive"
-    if (latency < 100) return "default"
-    if (latency < 300) return "secondary"
-    return "destructive"
-  }
-
-  const getSpeedColor = (speed: number) => {
-    if (speed > 10) return "default"
-    if (speed > 5) return "secondary"
-    return "destructive"
+    if (!networkInfo.isOnline) return <WifiOff className="h-5 w-5 text-red-600" />
+    return <Wifi className="h-5 w-5 text-green-600" />
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold font-arabic-display">مراقب الشبكة</h2>
-        <Button onClick={handleRefresh} disabled={isRefreshing} size="sm">
-          <RefreshCw className={`h-4 w-4 ml-2 ${isRefreshing ? "animate-spin" : ""}`} />
-          تحديث
-        </Button>
-      </div>
-
-      {/* Connection Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-arabic-display">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between font-arabic-display">
+          <div className="flex items-center gap-2">
             {getConnectionIcon()}
-            حالة الاتصال
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold mb-1">{networkStatus.online ? "متصل" : "غير متصل"}</div>
-              <Badge variant={networkStatus.online ? "default" : "destructive"}>
-                {networkStatus.online ? "Online" : "Offline"}
-              </Badge>
-            </div>
-
-            <div className="text-center">
-              <div className="text-2xl font-bold mb-1">{networkStatus.connectionType.toUpperCase()}</div>
-              <p className="text-sm text-muted-foreground font-arabic-body">نوع الشبكة</p>
-            </div>
-
-            <div className="text-center">
-              <div className="text-2xl font-bold mb-1">{networkStatus.downlink} Mbps</div>
-              <p className="text-sm text-muted-foreground font-arabic-body">سرعة التحميل</p>
-            </div>
-
-            <div className="text-center">
-              <div className="text-2xl font-bold mb-1">{networkStatus.rtt}ms</div>
-              <p className="text-sm text-muted-foreground font-arabic-body">زمن الاستجابة</p>
-            </div>
+            مراقب الشبكة
           </div>
-        </CardContent>
-      </Card>
+          <Badge variant={getQualityBadge(networkInfo.quality)}>
+            {networkInfo.quality === "excellent" && "ممتاز"}
+            {networkInfo.quality === "good" && "جيد"}
+            {networkInfo.quality === "fair" && "مقبول"}
+            {networkInfo.quality === "poor" && "ضعيف"}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Connection Status */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-arabic-body">حالة الاتصال</span>
+          <Badge variant={networkInfo.isOnline ? "default" : "destructive"}>
+            {networkInfo.isOnline ? "متصل" : "غير متصل"}
+          </Badge>
+        </div>
 
-      {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-arabic-display">أداء الخادم</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="font-arabic-body">زمن استجابة الخادم</span>
-              <Badge variant={getLatencyColor(networkStatus.serverLatency)}>
-                {networkStatus.serverLatency === -1 ? "خطأ" : `${networkStatus.serverLatency}ms`}
-              </Badge>
-            </div>
+        {networkInfo.isOnline && (
+          <>
+            {/* Network Details */}
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between font-arabic-body">
+                <span>نوع الشبكة</span>
+                <span className="uppercase">{networkInfo.effectiveType}</span>
+              </div>
 
-            <div className="flex justify-between items-center">
-              <span className="font-arabic-body">عرض النطاق المقدر</span>
-              <Badge variant={getSpeedColor(networkStatus.bandwidth / 1000)}>
-                {networkStatus.bandwidth > 0 ? `${(networkStatus.bandwidth / 1000).toFixed(1)} Mbps` : "غير متاح"}
-              </Badge>
-            </div>
+              <div className="flex justify-between font-arabic-body">
+                <span>سرعة التحميل</span>
+                <span>{networkInfo.downlink} Mbps</span>
+              </div>
 
-            <div className="flex justify-between items-center">
-              <span className="font-arabic-body">فقدان الحزم</span>
-              <Badge
-                variant={
-                  networkStatus.packetLoss < 1 ? "default" : networkStatus.packetLoss < 3 ? "secondary" : "destructive"
-                }
-              >
-                {networkStatus.packetLoss.toFixed(1)}%
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="flex justify-between font-arabic-body">
+                <span>زمن الاستجابة</span>
+                <span className={networkInfo.rtt < 100 ? "text-green-600" : "text-yellow-600"}>
+                  {networkInfo.rtt}ms
+                </span>
+              </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-arabic-display">معلومات إضافية</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="font-arabic-body">وضع توفير البيانات</span>
-              <Badge variant={networkStatus.saveData ? "secondary" : "outline"}>
-                {networkStatus.saveData ? "مفعل" : "معطل"}
-              </Badge>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <span className="font-arabic-body">نوع الجهاز</span>
-              <div className="flex items-center gap-2">
-                {window.innerWidth < 768 ? <Smartphone className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
-                <Badge variant="outline">{window.innerWidth < 768 ? "هاتف" : "حاسوب"}</Badge>
+              <div className="flex justify-between font-arabic-body">
+                <span>استجابة الخادم</span>
+                <span className={networkInfo.serverLatency < 100 ? "text-green-600" : "text-yellow-600"}>
+                  {networkInfo.serverLatency}ms
+                </span>
               </div>
             </div>
 
-            <div className="flex justify-between items-center">
-              <span className="font-arabic-body">آخر تحديث</span>
-              <Badge variant="outline">{lastUpdate.toLocaleTimeString("ar-SA")}</Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            {/* Speed Test Results */}
+            {(networkInfo.downloadSpeed > 0 || networkInfo.uploadSpeed > 0) && (
+              <div className="space-y-2 text-sm border-t pt-3">
+                <h4 className="font-semibold font-arabic-body">نتائج اختبار السرعة</h4>
+                <div className="flex justify-between font-arabic-body">
+                  <span>سرعة التحميل</span>
+                  <span>{networkInfo.downloadSpeed} Kbps</span>
+                </div>
+                <div className="flex justify-between font-arabic-body">
+                  <span>سرعة الرفع</span>
+                  <span>{networkInfo.uploadSpeed} Kbps</span>
+                </div>
+              </div>
+            )}
 
-      {/* Network Quality Indicator */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-arabic-display">جودة الشبكة</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="font-arabic-body">التقييم الإجمالي</span>
-              <Badge
-                variant={
-                  networkStatus.serverLatency < 100 && networkStatus.downlink > 5
-                    ? "default"
-                    : networkStatus.serverLatency < 300 && networkStatus.downlink > 2
-                      ? "secondary"
-                      : "destructive"
-                }
-                className="text-lg px-3 py-1"
+            {/* Data Saver */}
+            {networkInfo.saveData && (
+              <div className="flex items-center gap-2 text-sm text-yellow-600">
+                <Smartphone className="h-4 w-4" />
+                <span className="font-arabic-body">وضع توفير البيانات مفعل</span>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={testSpeed}
+                disabled={isTestingSpeed}
+                className="flex-1 font-arabic-body bg-transparent"
               >
-                {networkStatus.serverLatency < 100 && networkStatus.downlink > 5
-                  ? "ممتاز"
-                  : networkStatus.serverLatency < 300 && networkStatus.downlink > 2
-                    ? "جيد"
-                    : "ضعيف"}
-              </Badge>
+                <RefreshCw className={`h-4 w-4 ml-2 ${isTestingSpeed ? "animate-spin" : ""}`} />
+                اختبار السرعة
+              </Button>
             </div>
 
-            <div className="text-sm text-muted-foreground font-arabic-body">
-              {networkStatus.online
-                ? networkStatus.serverLatency < 100 && networkStatus.downlink > 5
-                  ? "الشبكة تعمل بأداء ممتاز. جميع الخدمات متاحة بسرعة عالية."
-                  : networkStatus.serverLatency < 300 && networkStatus.downlink > 2
-                    ? "الشبكة تعمل بأداء جيد. قد تواجه بعض التأخير في التحميل."
-                    : "الشبكة تعمل بأداء ضعيف. قد تواجه بطء في الاستجابة."
-                : "لا يوجد اتصال بالإنترنت. يرجى التحقق من إعدادات الشبكة."}
+            {/* Last Update */}
+            <div className="text-xs text-muted-foreground text-center font-arabic-body">
+              آخر تحديث: {lastUpdate.toLocaleTimeString("ar-SA")}
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   )
 }

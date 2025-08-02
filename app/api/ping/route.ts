@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server"
 
 export async function GET() {
-  const timestamp = new Date().toISOString()
+  const timestamp = Date.now()
 
   return NextResponse.json(
     {
-      status: "ok",
+      message: "pong",
       timestamp,
-      server: "tahseen-api",
-      latency: Math.random() * 50 + 10, // Simulate server processing time
+      server: "vercel",
     },
     {
       headers: {
@@ -21,5 +20,20 @@ export async function GET() {
 }
 
 export async function POST() {
-  return GET() // Handle POST requests the same way
+  const timestamp = Date.now()
+
+  return NextResponse.json(
+    {
+      message: "pong",
+      timestamp,
+      server: "vercel",
+    },
+    {
+      headers: {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    },
+  )
 }

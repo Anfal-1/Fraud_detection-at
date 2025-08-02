@@ -1,22 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Performance optimizations
-  experimental: {
-    optimizeCss: true,
-    optimizePackageImports: [
-      'lucide-react',
-      '@radix-ui/react-icons',
-      'recharts'
-    ],
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
-      },
-    },
-  },
+  // Remove all experimental features that cause build issues
 
   // Image optimization
   images: {
@@ -60,25 +44,6 @@ const nextConfig = {
         ],
       },
     ]
-  },
-
-  // Bundle analyzer (optional)
-  webpack: (config, { dev, isServer }) => {
-    // Optimize bundle size
-    if (!dev && !isServer) {
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-          },
-        },
-      }
-    }
-
-    return config
   },
 
   // ESLint and TypeScript configurations
