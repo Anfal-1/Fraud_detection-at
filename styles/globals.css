@@ -1,7 +1,5 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
-
-@custom-variant dark (&:is(.dark *));
+@import "tailwindcss";
+@import "tw-animate-css";
 
 :root {
   --background: oklch(1 0 0);
@@ -119,5 +117,174 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* RTL Support */
+[dir="rtl"] {
+  direction: rtl;
+}
+
+/* Custom animations */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: none;
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-bounce {
+  animation: bounce 1s infinite;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid hsl(var(--muted));
+  border-top: 2px solid hsl(var(--primary));
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Status indicators */
+.status-high {
+  @apply bg-red-500 text-white;
+}
+
+.status-medium {
+  @apply bg-yellow-500 text-white;
+}
+
+.status-low {
+  @apply bg-green-500 text-white;
+}
+
+.status-resolved {
+  @apply bg-gray-500 text-white;
+}
+
+/* Chart containers */
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 300px;
+}
+
+.chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground));
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+/* Gradient backgrounds */
+.gradient-bg {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Network visualization styles */
+.network-node {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.network-node:hover {
+  transform: scale(1.1);
+}
+
+/* Transaction status colors */
+.transaction-approved {
+  @apply text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20;
+}
+
+.transaction-pending {
+  @apply text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/20;
+}
+
+.transaction-rejected {
+  @apply text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20;
+}
+
+.transaction-flagged {
+  @apply text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/20;
+}
+
+/* Alert priority colors */
+.alert-critical {
+  @apply border-red-500 bg-red-50 dark:bg-red-900/20;
+}
+
+.alert-high {
+  @apply border-orange-500 bg-orange-50 dark:bg-orange-900/20;
+}
+
+.alert-medium {
+  @apply border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20;
+}
+
+.alert-low {
+  @apply border-blue-500 bg-blue-50 dark:bg-blue-900/20;
+}
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .chart-container {
+    height: 250px;
+  }
+}
+
+@media (max-width: 640px) {
+  .chart-container {
+    height: 200px;
   }
 }
